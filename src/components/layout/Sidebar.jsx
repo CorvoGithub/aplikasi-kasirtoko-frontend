@@ -9,7 +9,9 @@ import {
   BarChart3,
   ShoppingCart,
   Users,
-  Package
+  Package,
+  PackageSearch,
+  History,
 } from 'lucide-react';
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
@@ -17,7 +19,10 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
 
   const menuItems = [
     { to: "/dashboard/main", label: "Dashboard", icon: <Home size={20} /> },
-    { to: "/dashboard/profile", label: "Profile", icon: <User size={20} /> },
+    { to: "/dashboard/penjualan", label: "Penjualan", icon: <ShoppingCart size={20} /> },
+    { to: "/dashboard/kelola", label: "Kelola Barang", icon: <PackageSearch size={20} /> },
+    { to: "/dashboard/riwayat", label: "Riwayat Transaksi", icon: <History size={20} /> },
+
   ];
 
   const sidebarClasses = `

@@ -13,7 +13,10 @@ import Login from "./pages/auth/Login";
 import './App.css'
 
 //Content Imports
-import Profile from "./pages/content/Profile";
+
+import Penjualan from "./pages/content/Penjualan";
+import Kelola from "./pages/content/KelolaBarang";
+import Riwayat from "./pages/content/Riwayat";
 
 function App() {
   return (
@@ -39,10 +42,12 @@ function App() {
 
                 <Route index element={<Navigate to="main" replace />} />
                 <Route path="main" element={<Dashboard />} />
-                <Route path="profile" element={<Profile />} />
+                <Route path="penjualan" element={<Penjualan />} />
+                <Route path="kelola" element={<Kelola />} />
+                <Route path="riwayat" element={<Riwayat />} />
 
               </Route>
-            </Route>
+            </Route> 
 
             {/* Redirect root to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
