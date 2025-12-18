@@ -1,17 +1,32 @@
 // src/pages/Riwayat.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Eye, Calendar, DollarSign, X, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { 
+  Eye, Calendar, Clock, X, Printer, Download, CheckCircle2, Receipt, FileSpreadsheet, FileText, ChevronDown
+} from 'lucide-react';
 
 const Riwayat = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Modal State
+  // Modal & Dropdown State
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
 
-  // 1. Fetch History
+  // Helper: Format Rupiah
+  const formatRupiah = (number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(number);
+  };
+
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -28,127 +43,283 @@ const Riwayat = () => {
 
   useEffect(() => {
     fetchHistory();
+    
+    // Close dropdown when clicking outside
+    function handleClickOutside(event) {
+        if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+            setShowExportMenu(false);
+        }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 2. Open Detail Modal
+  // --- EXPORT LOGIC ---
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(48, 127, 226); // Mantra Blue
+    doc.text("Mantra POS - Laporan Penjualan", 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Tanggal Export: ${new Date().toLocaleDateString('id-ID')}`, 14, 30);
+
+    // Table Data
+    const tableColumn = ["ID Transaksi", "Waktu", "Total Belanja", "Uang Diterima", "Kembalian"];
+    const tableRows = transactions.map(trx => [
+        trx.kode_transaksi,
+        new Date(trx.created_at).toLocaleString('id-ID'),
+        formatRupiah(trx.total_harga),
+        formatRupiah(trx.uang_diberikan),
+        formatRupiah(trx.kembalian),
+    ]);
+
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 40,
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [48, 127, 226], textColor: [255, 255, 255] }, // Blue Header
+        alternateRowStyles: { fillColor: [248, 250, 252] }
+    });
+
+    doc.save(`Laporan_Mantra_${new Date().getTime()}.pdf`);
+    setShowExportMenu(false);
+  };
+
+  const exportToExcel = () => {
+    const worksheetData = transactions.map(trx => ({
+        "ID Transaksi": trx.kode_transaksi,
+        "Waktu Transaksi": new Date(trx.created_at).toLocaleString('id-ID'),
+        "Total Belanja": parseInt(trx.total_harga),
+        "Uang Diterima": parseInt(trx.uang_diberikan),
+        "Kembalian": parseInt(trx.kembalian),
+        "Jumlah Item": trx.transaksi_details ? trx.transaksi_details.length : 0
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Penjualan");
+    
+    XLSX.writeFile(workbook, `Laporan_Mantra_${new Date().getTime()}.xlsx`);
+    setShowExportMenu(false);
+  };
+
+  // --- RENDER ---
+
   const openDetail = (trx) => {
     setSelectedTransaction(trx);
     setIsModalOpen(true);
   };
 
-  // Helper to format date
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('id-ID', options);
-  };
+  const getDatePart = (dateString) => new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const getTimePart = (dateString) => new Date(dateString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      
+      {/* 1. Header & Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-           <h1 className="text-3xl font-bold text-gray-900">Riwayat Penjualan</h1>
-           <p className="text-gray-600">Daftar semua transaksi yang telah selesai.</p>
+           <h1 className="text-2xl font-bold text-slate-900">Riwayat Transaksi</h1>
+           <p className="text-slate-500 mt-1">Laporan penjualan yang telah berhasil diproses.</p>
+        </div>
+        
+        {/* EXPORT BUTTON - ACCENT COLOR USAGE */}
+        <div className="relative" ref={exportMenuRef}>
+            <button 
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-[#ffad00] hover:border-[#ffad00] px-4 py-2.5 rounded-xl font-medium transition-all shadow-sm group"
+            >
+                {/* Orange Icon on Hover */}
+                <Download size={18} className="text-slate-500 group-hover:text-[#ffad00] transition-colors" /> 
+                <span>Export Laporan</span>
+                <ChevronDown size={16} className={`transition-transform duration-200 ${showExportMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Export Dropdown */}
+            {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-20 animate-in fade-in zoom-in-95 duration-200">
+                    <button 
+                        onClick={exportToPDF}
+                        className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-[#ffad00] flex items-center gap-3 transition-colors"
+                    >
+                        <FileText size={16} /> Export PDF
+                    </button>
+                    <button 
+                        onClick={exportToExcel}
+                        className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-[#ffad00] flex items-center gap-3 transition-colors"
+                    >
+                        <FileSpreadsheet size={16} /> Export Excel
+                    </button>
+                </div>
+            )}
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 font-semibold text-gray-600">Kode Transaksi</th>
-              <th className="px-6 py-4 font-semibold text-gray-600">Waktu</th>
-              <th className="px-6 py-4 font-semibold text-gray-600">Total Belanja</th>
-              <th className="px-6 py-4 font-semibold text-gray-600">Uang / Kembalian</th>
-              <th className="px-6 py-4 font-semibold text-gray-600">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? (
-                <tr><td colSpan="5" className="text-center py-6 text-gray-500">Memuat data...</td></tr>
-            ) : transactions.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-6 text-gray-500">Belum ada transaksi.</td></tr>
-            ) : (
-                transactions.map((trx) => (
-                    <tr key={trx.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 font-mono text-sm text-blue-600 font-medium">
-                            {trx.kode_transaksi}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 text-sm">
-                            <div className="flex items-center gap-2">
-                                <Calendar size={14} />
-                                {formatDate(trx.created_at)}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-900">
-                            Rp {parseInt(trx.total_harga).toLocaleString('id-ID')}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                            <div>In: Rp {parseInt(trx.uang_diberikan).toLocaleString('id-ID')}</div>
-                            <div className="text-green-600">Out: Rp {parseInt(trx.kembalian).toLocaleString('id-ID')}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                            <button 
-                                onClick={() => openDetail(trx)}
-                                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
-                            >
-                                <Eye size={16} /> Detail
-                            </button>
-                        </td>
-                    </tr>
-                ))
-            )}
-          </tbody>
-        </table>
+      {/* 2. Main Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">ID Transaksi</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Waktu</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Total Belanja</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Detail</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                   <tr><td colSpan="5" className="text-center py-12 text-slate-400">Memuat data...</td></tr>
+                ) : transactions.length === 0 ? (
+                   <tr>
+                       <td colSpan="5" className="text-center py-12 text-slate-400">
+                           <div className="flex flex-col items-center gap-2">
+                               <Receipt size={32} className="opacity-50"/>
+                               <p>Belum ada transaksi tercatat.</p>
+                           </div>
+                       </td>
+                   </tr>
+                ) : (
+                    transactions.map((trx) => (
+                        <tr key={trx.id} className="hover:bg-blue-50/30 transition-colors group">
+                            
+                            <td className="px-6 py-4">
+                                <div className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded w-fit">
+                                    {trx.kode_transaksi}
+                                </div>
+                            </td>
+
+                            <td className="px-6 py-4">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-slate-900 flex items-center gap-1.5">
+                                        <Calendar size={14} className="text-[#307fe2]"/> 
+                                        {getDatePart(trx.created_at)}
+                                    </span>
+                                    <span className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
+                                        <Clock size={14}/> 
+                                        {getTimePart(trx.created_at)} WIB
+                                    </span>
+                                </div>
+                            </td>
+
+                            <td className="px-6 py-4 text-right">
+                                <span className="font-bold text-[#307fe2] text-sm">
+                                    {formatRupiah(trx.total_harga)}
+                                </span>
+                            </td>
+
+                            <td className="px-6 py-4 text-center">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                    <CheckCircle2 size={12} />
+                                    Sukses
+                                </span>
+                            </td>
+
+                            <td className="px-6 py-4 text-center">
+                                {/* Accent Usage: Eye Icon turns Orange on hover */}
+                                <button 
+                                    onClick={() => openDetail(trx)}
+                                    className="p-2 text-slate-400 hover:text-[#ffad00] hover:bg-orange-50 rounded-lg transition-all"
+                                    title="Lihat Detail"
+                                >
+                                    <Eye size={18} />
+                                </button>
+                            </td>
+                        </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+        </div>
       </div>
 
-      {/* Detail Modal */}
+      {/* 3. Detail Modal */}
       {isModalOpen && selectedTransaction && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
                 
-                {/* Modal Header */}
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <div>
-                        <h3 className="text-lg font-bold text-gray-800">Detail Transaksi</h3>
-                        <p className="text-xs text-gray-500 font-mono mt-1">{selectedTransaction.kode_transaksi}</p>
+                {/* Header Pattern with Blue */}
+                <div className="bg-[#307fe2] px-6 py-5 text-white text-center relative overflow-hidden">
+                    <div className="relative z-10">
+                        <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-md">
+                            <CheckCircle2 size={24} className="text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold">Transaksi Berhasil</h3>
+                        <p className="text-blue-100 text-sm opacity-90">{selectedTransaction.kode_transaksi}</p>
+                        <p className="text-xs text-blue-200 mt-1">{new Date(selectedTransaction.created_at).toLocaleString('id-ID')}</p>
                     </div>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                        <X size={24} />
-                    </button>
+                    <div className="absolute inset-0 opacity-10" 
+                        style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '16px 16px' }}>
+                    </div>
                 </div>
 
-                {/* Modal Body: Item List */}
-                <div className="p-6 max-h-[60vh] overflow-y-auto">
-                    <div className="space-y-4">
-                        {selectedTransaction.transaksi_details.map((item, index) => (
-                            <div key={index} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                                <div>
-                                    <p className="font-medium text-gray-900">
-                                        {item.produk ? item.produk.nama_produk : <span className="text-red-500 italic">Produk Dihapus</span>}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        {item.qty} x Rp {parseInt(item.harga_satuan).toLocaleString('id-ID')}
+                <div className="p-6 overflow-y-auto bg-slate-50">
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                        
+                        <div className="space-y-4 mb-6">
+                            {selectedTransaction.transaksi_details.map((item, index) => (
+                                <div key={index} className="flex justify-between items-start border-b border-dashed border-slate-100 pb-3 last:border-0 last:pb-0">
+                                    <div>
+                                        <p className="font-semibold text-slate-800 text-sm">
+                                            {item.produk ? item.produk.nama_produk : <span className="text-red-500 italic">Produk Dihapus</span>}
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            {item.qty} x {formatRupiah(item.harga_satuan)}
+                                        </p>
+                                    </div>
+                                    <p className="font-medium text-slate-800 text-sm">
+                                        {formatRupiah(item.subtotal)}
                                     </p>
                                 </div>
-                                <p className="font-semibold text-gray-900">
-                                    Rp {parseInt(item.subtotal).toLocaleString('id-ID')}
-                                </p>
+                            ))}
+                        </div>
+
+                        <div className="space-y-2 pt-4 border-t-2 border-slate-100">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-500">Total Item</span>
+                                <span className="font-medium text-slate-700">{selectedTransaction.transaksi_details.reduce((sum, item) => sum + item.qty, 0)} Pcs</span>
                             </div>
-                        ))}
+                            <div className="flex justify-between text-base font-bold text-slate-900 pt-2">
+                                <span>Total Tagihan</span>
+                                <span className="text-[#307fe2]">{formatRupiah(selectedTransaction.total_harga)}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-lg p-3 mt-4 text-sm space-y-1">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Tunai</span>
+                                <span className="font-medium text-slate-700">{formatRupiah(selectedTransaction.uang_diberikan)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Kembali</span>
+                                <span className="font-medium text-emerald-600">{formatRupiah(selectedTransaction.kembalian)}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Modal Footer: Totals */}
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 space-y-2">
-                    <div className="flex justify-between text-sm text-gray-600">
-                        <span>Total Qty</span>
-                        <span>{selectedTransaction.transaksi_details.reduce((sum, item) => sum + item.qty, 0)} Items</span>
-                    </div>
-                    <div className="flex justify-between text-xl font-bold text-gray-900">
-                        <span>Grand Total</span>
-                        <span>Rp {parseInt(selectedTransaction.total_harga).toLocaleString('id-ID')}</span>
-                    </div>
+                <div className="p-4 bg-white border-t border-slate-200 flex gap-3">
+                    <button 
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                        onClick={() => window.print()} 
+                    >
+                        <Printer size={18} />
+                        Cetak
+                    </button>
+                    <button 
+                        onClick={() => setIsModalOpen(false)}
+                        className="flex-1 px-4 py-2.5 bg-[#307fe2] text-white font-semibold rounded-xl hover:bg-blue-700 transition-all"
+                    >
+                        Tutup
+                    </button>
                 </div>
 
             </div>
