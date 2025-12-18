@@ -40,9 +40,9 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Mantra</h1>
-            <p className="text-[10px] text-blue-100 uppercase tracking-wider font-semibold opacity-80">
-              {user?.role || 'Point of Sale'}
+            <h1 className="text-xl font-semibold tracking-tight">Mantra</h1>
+            <p className="text-[12px] text-blue-100 tracking-wider font-semibold opacity-80">
+              {user?.role || 'Administration'}
             </p>
           </div>
         </div>

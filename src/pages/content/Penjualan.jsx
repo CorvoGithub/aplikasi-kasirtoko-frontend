@@ -352,3 +352,6 @@ const Penjualan = () => {
 };
 
 export default Penjualan;
+
+//next benerin ini UI nya
+//+ bikin responsive semua page.

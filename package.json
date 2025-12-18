@@ -12,7 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
     "axios": "^1.13.2",
-    "framer-motion": "^12.23.24",
+    "framer-motion": "^12.23.26",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.554.0",
