@@ -3,79 +3,84 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
-  Settings, 
-  User, 
-  X, 
-  BarChart3,
-  ShoppingCart,
-  Users,
-  Package,
-  PackageSearch,
+  ShoppingCart, 
+  PackageSearch, 
   History,
+  X,
+  LogOut
 } from 'lucide-react';
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem('user'));
 
   const menuItems = [
-    { to: "/dashboard/main", label: "Dashboard", icon: <Home size={20} /> },
-    { to: "/dashboard/penjualan", label: "Penjualan", icon: <ShoppingCart size={20} /> },
-    { to: "/dashboard/kelola", label: "Kelola Barang", icon: <PackageSearch size={20} /> },
-    { to: "/dashboard/riwayat", label: "Riwayat Transaksi", icon: <History size={20} /> },
-
+    { to: "/dashboard/main", label: "Dashboard", icon: <Home size={22} /> },
+    { to: "/dashboard/penjualan", label: "Penjualan", icon: <ShoppingCart size={22} /> },
+    { to: "/dashboard/kelola", label: "Kelola Barang", icon: <PackageSearch size={22} /> },
+    { to: "/dashboard/riwayat", label: "Riwayat Transaksi", icon: <History size={22} /> },
   ];
 
   const sidebarClasses = `
-    w-64 bg-white border-r border-gray-200 flex flex-col h-screen 
-    fixed top-0 left-0 z-30 transition-transform duration-300 ease-in-out 
+    w-72 bg-white border-r border-slate-200 flex flex-col h-screen 
+    fixed top-0 left-0 z-40 transition-transform duration-300 ease-out 
     lg:relative lg:translate-x-0 lg:z-auto
-    ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-    shadow-lg lg:shadow-none
+    ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:shadow-none"}
   `;
 
   return (
     <div className={sidebarClasses}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-linear-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-            <Home className="h-6 w-6 text-white" />
+      {/* 1. Header Area (Brand Identity) */}
+      <div className="h-20 flex items-center justify-between px-6 bg-[#307fe2] text-white">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
+            <img 
+              src="/images/m_white.png" 
+              alt="Mantra Logo" 
+              className="w-8 h-8 object-contain"
+            />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">MyApp</h1>
-            <p className="text-xs text-gray-500 capitalize">{user?.role || 'User'}</p>
+            <h1 className="text-xl font-bold tracking-tight">Mantra</h1>
+            <p className="text-[10px] text-blue-100 uppercase tracking-wider font-semibold opacity-80">
+              {user?.role || 'Point of Sale'}
+            </p>
           </div>
         </div>
+        
         <button
           onClick={() => setIsSidebarOpen(false)}
-          className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+          className="lg:hidden p-1.5 rounded-lg text-blue-100 hover:bg-white/10 transition-colors"
         >
           <X size={20} />
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      {/* 2. Navigation Menu */}
+      <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
+        <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
+          Menu Utama
+        </p>
         {menuItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             onClick={() => setIsSidebarOpen(false)}
             className={({ isActive }) =>
-              `flex items-center space-x-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${
+              `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 relative group ${
                 isActive
-                  ? 'bg-linear-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-100 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-blue-50 text-[#307fe2]' // Active State
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' // Inactive State
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={
-                  isActive 
-                    ? 'text-blue-600' 
-                    : 'text-gray-400 group-hover:text-gray-600'
-                }>
+                {/* Active Indicator Strip */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-[#ffad00] rounded-r-full" />
+                )}
+                
+                <span className={`transition-colors ${isActive ? 'text-[#307fe2]' : 'text-slate-400 group-hover:text-slate-600'}`}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -85,18 +90,18 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center space-x-3 px-3 py-3 bg-gray-50 rounded-lg">
-          <div className="w-8 h-8 bg-linear-to-r from-gray-600 to-gray-700 rounded-full flex items-center justify-center">
-            <User className="h-4 w-4 text-white" />
+      {/* 3. Footer (User Profile) */}
+      <div className="p-4 border-t border-slate-100">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+          <div className="w-10 h-10 rounded-full bg-[#307fe2] flex items-center justify-center text-white font-bold text-sm">
+            {user?.name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-bold text-slate-800 truncate">
               {user?.name || 'User'}
             </p>
-            <p className="text-xs text-gray-500 truncate">
-              {user?.email || 'user@example.com'}
+            <p className="text-xs text-slate-500 truncate">
+              {user?.store_name || 'Mantra Store'}
             </p>
           </div>
         </div>
