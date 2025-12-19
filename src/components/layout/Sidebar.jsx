@@ -42,7 +42,7 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Mantra</h1>
             <p className="text-[12px] text-blue-100 tracking-wider font-semibold opacity-80">
-              {user?.role || 'Administration'}
+              {user?.role || 'Point Of Sale'}
             </p>
           </div>
         </div>

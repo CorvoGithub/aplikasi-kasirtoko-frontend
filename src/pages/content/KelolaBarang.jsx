@@ -10,10 +10,11 @@ import {
   Package, 
   ImageIcon, 
   AlertCircle,
-  ChevronLeft,      // NEW
-  ChevronRight,     // NEW
-  ChevronsLeft,     // NEW
-  ChevronsRight     // NEW
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Check 
 } from 'lucide-react';
 
 const KelolaBarang = () => {
@@ -25,12 +26,17 @@ const KelolaBarang = () => {
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Default showing 10 items
+  const [itemsPerPage] = useState(10);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+
+  // Success Notification State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isExiting, setIsExiting] = useState(false); 
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -71,10 +77,36 @@ const KelolaBarang = () => {
     fetchProducts();
   }, []);
 
-  // Reset to page 1 when searching
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  // --- NOTIFICATION LOGIC ---
+  const triggerSuccess = (msg) => {
+    setSuccessMessage(msg);
+    setIsExiting(false);
+    setShowSuccess(true);
+  };
+
+  useEffect(() => {
+    if (showSuccess) {
+      // 1. Trigger Exit Animation slightly before removal
+      const exitTimer = setTimeout(() => {
+        setIsExiting(true);
+      }, 2700);
+
+      // 2. Unmount component
+      const removeTimer = setTimeout(() => {
+        setShowSuccess(false);
+        setIsExiting(false);
+      }, 3000);
+
+      return () => {
+        clearTimeout(exitTimer);
+        clearTimeout(removeTimer);
+      };
+    }
+  }, [showSuccess]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,7 +114,6 @@ const KelolaBarang = () => {
 
     const token = localStorage.getItem('token');
     
-    // Create FormData for file upload
     const data = new FormData();
     data.append('nama_produk', formData.nama_produk);
     data.append('harga_modal', formData.harga_modal);
@@ -102,14 +133,17 @@ const KelolaBarang = () => {
       };
 
       if (isEditMode) {
-        data.append('_method', 'PUT'); // Laravel spoofing
+        data.append('_method', 'PUT'); 
         await axios.post(`http://localhost:8000/api/products/${currentId}`, data, config);
+        triggerSuccess('Produk berhasil diperbarui');
       } else {
         await axios.post('http://localhost:8000/api/products', data, config);
+        triggerSuccess('Produk berhasil ditambahkan');
       }
       
       closeModal();
       fetchProducts();
+
     } catch (error) {
       console.error("Error saving product", error);
       alert("Gagal menyimpan produk.");
@@ -126,8 +160,10 @@ const KelolaBarang = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchProducts();
+      triggerSuccess('Produk berhasil dihapus');
     } catch (error) {
       console.error("Error deleting", error);
+      alert("Gagal menghapus produk.");
     }
   };
 
@@ -167,8 +203,53 @@ const KelolaBarang = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
-    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto relative">
       
+      {/* ================= MINIMAL TOAST NOTIFICATION (Fixed Centering) ================= */}
+      {showSuccess && (
+        // 1. Container: Full width, fixed top, Flex center. This guarantees centering.
+        <div className="fixed top-6 left-0 w-full flex justify-center z-[100] pointer-events-none">
+           
+           {/* 2. The Toast Pill: Pointer events auto so you can click/hover it */}
+           <div 
+             className={`pointer-events-auto bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-full px-6 py-3 flex items-center gap-3 relative overflow-hidden ${
+               isExiting 
+                 ? 'animate-[slideUp_0.4s_ease-in_forwards]'   // Exit: Slide UP
+                 : 'animate-[slideDown_0.4s_ease-out_forwards]' // Enter: Slide DOWN
+             }`}
+           >
+              {/* Icon */}
+              <div className="bg-emerald-100 p-1 rounded-full text-emerald-600 relative z-10">
+                 <Check size={14} strokeWidth={3} />
+              </div>
+              
+              {/* Text */}
+              <span className="text-slate-700 font-medium text-sm relative z-10 pr-2">
+                {successMessage}
+              </span>
+
+              {/* Border Timer (Bottom) */}
+              <div className="absolute bottom-0 left-0 h-[3px] bg-emerald-500 w-full animate-[shrink_3s_linear_forwards]" />
+           </div>
+
+           {/* Custom Animations (Only manipulating Y-axis, no X conflict) */}
+           <style>{`
+             @keyframes slideDown {
+               from { opacity: 0; transform: translateY(-150%); }
+               to { opacity: 1; transform: translateY(0); }
+             }
+             @keyframes slideUp {
+               from { opacity: 1; transform: translateY(0); }
+               to { opacity: 0; transform: translateY(-150%); }
+             }
+             @keyframes shrink {
+               from { width: 100%; }
+               to { width: 0%; }
+             }
+           `}</style>
+        </div>
+      )}
+
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -184,7 +265,7 @@ const KelolaBarang = () => {
         </button>
       </div>
 
-      {/* 2. Search Bar - with Orange Focus Ring */}
+      {/* 2. Search Bar */}
       <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center max-w-md group focus-within:border-[#ffad00] focus-within:ring-4 focus-within:ring-[#ffad00]/10 transition-all">
         <div className="p-2 text-slate-400 group-focus-within:text-[#ffad00] transition-colors">
             <Search size={20} />
@@ -232,7 +313,6 @@ const KelolaBarang = () => {
                         </td>
                     </tr>
                 ) : (
-                    // MAP CURRENT ITEMS (PAGINATED), NOT ALL PRODUCTS
                     currentItems.map((product) => (
                       <tr key={product.id} className="hover:bg-blue-50/30 transition-colors group">
                         
@@ -258,7 +338,7 @@ const KelolaBarang = () => {
                             </div>
                         </td>
 
-                        {/* Prices (Right Aligned) */}
+                        {/* Prices */}
                         <td className="px-6 py-4 text-right text-slate-600 font-medium">
                             {formatRupiah(product.harga_modal)}
                         </td>
@@ -266,7 +346,7 @@ const KelolaBarang = () => {
                             {formatRupiah(product.harga_jual)}
                         </td>
 
-                        {/* Stock (Pill Badge) */}
+                        {/* Stock */}
                         <td className="px-6 py-4 text-center">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                               product.stok > 10 
@@ -278,7 +358,7 @@ const KelolaBarang = () => {
                           </span>
                         </td>
 
-                        {/* Actions (Orange Edit Button) */}
+                        {/* Actions */}
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                               <button 
@@ -307,180 +387,56 @@ const KelolaBarang = () => {
         {/* 4. Pagination Footer */}
         {!loading && filteredProducts.length > 0 && (
           <div className="bg-white px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-             {/* Text Info */}
              <div className="text-sm text-slate-500">
                 Menampilkan <span className="font-semibold text-slate-800">{indexOfFirstItem + 1}</span> - <span className="font-semibold text-slate-800">{Math.min(indexOfLastItem, filteredProducts.length)}</span> dari <span className="font-semibold text-slate-800">{filteredProducts.length}</span> barang
              </div>
 
-             {/* Controls */}
              <div className="flex items-center gap-1">
-                {/* First Page */}
-                <button 
-                   onClick={() => paginate(1)} 
-                   disabled={currentPage === 1}
-                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Halaman Pertama"
-                >
-                   <ChevronsLeft size={18} />
-                </button>
-                
-                {/* Previous */}
-                <button 
-                   onClick={() => paginate(currentPage - 1)} 
-                   disabled={currentPage === 1}
-                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Sebelumnya"
-                >
-                   <ChevronLeft size={18} />
-                </button>
-
-                {/* Page Indicator */}
-                <div className="px-4 py-2 bg-[#307fe2]/10 text-[#307fe2] font-bold text-sm rounded-lg">
-                   {currentPage}
-                </div>
-
-                {/* Next */}
-                <button 
-                   onClick={() => paginate(currentPage + 1)} 
-                   disabled={currentPage === totalPages}
-                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Selanjutnya"
-                >
-                   <ChevronRight size={18} />
-                </button>
-
-                {/* Last Page */}
-                <button 
-                   onClick={() => paginate(totalPages)} 
-                   disabled={currentPage === totalPages}
-                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Halaman Terakhir"
-                >
-                   <ChevronsRight size={18} />
-                </button>
+                <button onClick={() => paginate(1)} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"><ChevronsLeft size={18} /></button>
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"><ChevronLeft size={18} /></button>
+                <div className="px-4 py-2 bg-[#307fe2]/10 text-[#307fe2] font-bold text-sm rounded-lg">{currentPage}</div>
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"><ChevronRight size={18} /></button>
+                <button onClick={() => paginate(totalPages)} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"><ChevronsRight size={18} /></button>
              </div>
           </div>
         )}
       </div>
 
-      {/* 5. Modal Form */}
+      {/* 5. Product Form Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
-            
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
-              <h2 className="text-lg font-bold text-slate-900">
-                  {isEditMode ? 'Edit Produk' : 'Tambah Produk Baru'}
-              </h2>
-              <button onClick={closeModal} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                  <X size={20} className="text-slate-500" />
-              </button>
+              <h2 className="text-lg font-bold text-slate-900">{isEditMode ? 'Edit Produk' : 'Tambah Produk Baru'}</h2>
+              <button onClick={closeModal} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} className="text-slate-500" /></button>
             </div>
             
             <div className="p-6 overflow-y-auto">
                 <form id="productForm" onSubmit={handleSubmit} className="space-y-5">
-                    
+                    {/* Inputs... */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Nama Barang</label>
-                        <input 
-                            type="text" 
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all"
-                            value={formData.nama_produk}
-                            onChange={e => setFormData({...formData, nama_produk: e.target.value})}
-                            required
-                        />
+                        <input type="text" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all" value={formData.nama_produk} onChange={e => setFormData({...formData, nama_produk: e.target.value})} required />
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Harga Modal</label>
-                            <input 
-                                type="number" 
-                                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all"
-                                value={formData.harga_modal}
-                                onChange={e => setFormData({...formData, harga_modal: e.target.value})}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Harga Jual</label>
-                            <input 
-                                type="number" 
-                                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all"
-                                value={formData.harga_jual}
-                                onChange={e => setFormData({...formData, harga_jual: e.target.value})}
-                                required
-                            />
-                        </div>
+                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Harga Modal</label><input type="number" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all" value={formData.harga_modal} onChange={e => setFormData({...formData, harga_modal: e.target.value})} required /></div>
+                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Harga Jual</label><input type="number" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all" value={formData.harga_jual} onChange={e => setFormData({...formData, harga_jual: e.target.value})} required /></div>
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Stok Awal</label>
-                        <input 
-                            type="number" 
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all"
-                            value={formData.stok}
-                            onChange={e => setFormData({...formData, stok: e.target.value})}
-                            required
-                        />
-                    </div>
-                    
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Deskripsi</label>
-                        <textarea 
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all resize-none"
-                            rows="2"
-                            value={formData.deskripsi || ''}
-                            onChange={e => setFormData({...formData, deskripsi: e.target.value})}
-                        />
-                    </div>
-
+                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Stok Awal</label><input type="number" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all" value={formData.stok} onChange={e => setFormData({...formData, stok: e.target.value})} required /></div>
+                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Deskripsi</label><textarea className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all resize-none" rows="2" value={formData.deskripsi || ''} onChange={e => setFormData({...formData, deskripsi: e.target.value})} /></div>
                     <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
-                        <input 
-                        type="file" 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={e => setFormData({...formData, foto: e.target.files[0]})}
-                        accept="image/*"
-                        />
-                        <div className="flex flex-col items-center justify-center text-slate-500 group-hover:text-[#ffad00] transition-colors">
-                            <ImageIcon size={24} className="mb-2" />
-                            <p className="text-sm font-medium">{formData.foto instanceof File ? formData.foto.name : "Klik untuk upload foto produk"}</p>
-                        </div>
+                        <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={e => setFormData({...formData, foto: e.target.files[0]})} accept="image/*" />
+                        <div className="flex flex-col items-center justify-center text-slate-500 group-hover:text-[#ffad00] transition-colors"><ImageIcon size={24} className="mb-2" /><p className="text-sm font-medium">{formData.foto instanceof File ? formData.foto.name : "Klik untuk upload foto produk"}</p></div>
                     </div>
-
                 </form>
             </div>
 
-            {/* Modal Footer with Loading Button */}
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
-                <button 
-                    type="button" 
-                    onClick={closeModal} 
-                    className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-white hover:shadow-sm transition-all"
-                    disabled={submitLoading}
-                >
-                    Batal
-                </button>
-                <button 
-                    type="submit" 
-                    form="productForm"
-                    disabled={submitLoading}
-                    className="flex-1 px-4 py-2.5 bg-[#307fe2] text-white font-semibold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                    {submitLoading ? (
-                        <>
-                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Menyimpan...
-                        </>
-                    ) : (
-                        "Simpan Produk"
-                    )}
+                <button type="button" onClick={closeModal} className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-white hover:shadow-sm transition-all" disabled={submitLoading}>Batal</button>
+                <button type="submit" form="productForm" disabled={submitLoading} className="flex-1 px-4 py-2.5 bg-[#307fe2] text-white font-semibold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center">
+                    {submitLoading ? "Menyimpan..." : "Simpan Produk"}
                 </button>
             </div>
-
           </div>
         </div>
       )}

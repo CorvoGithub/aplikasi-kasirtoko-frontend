@@ -420,8 +420,8 @@ const Penjualan = () => {
                  <input 
                    type="text" 
                    inputMode="numeric"
-                   placeholder="Masukan nominal..." 
-                   className="w-full pl-16 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all text-right text-slate-800 placeholder-slate-400 font-medium"
+                   placeholder="Masukkan nominal..." 
+                   className="w-full pl-16 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all text-right text-slate-800 placeholder-slate-400 font-semibold"
                    value={cashReceived}
                    onChange={handleCashInput}
                    onKeyDown={handleKeyDown}
