@@ -5,11 +5,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { 
-  Eye, Calendar, Clock, X, Printer, Download, CheckCircle2, Receipt, FileSpreadsheet, FileText, ChevronDown,
-  ChevronLeft,      // NEW
-  ChevronRight,     // NEW
-  ChevronsLeft,     // NEW
-  ChevronsRight     // NEW
+  Eye, Calendar, Clock, Printer, Download, CheckCircle2, Receipt, FileSpreadsheet, FileText, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  Filter, RotateCcw, X, Search
 } from 'lucide-react';
 
 const Riwayat = () => {
@@ -19,6 +17,11 @@ const Riwayat = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  // Filter State
+  const [filterDate, setFilterDate] = useState('');
+  const [startHour, setStartHour] = useState('');
+  const [endHour, setEndHour] = useState('');
 
   // Modal & Dropdown State
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -35,13 +38,28 @@ const Riwayat = () => {
     }).format(number);
   };
 
+  // Generate Hour Options (00 - 23)
+  const hourOptions = Array.from({ length: 24 }, (_, i) => 
+    i.toString().padStart(2, '0')
+  );
+
   const fetchHistory = async () => {
+    setLoading(true); // Ensure loading shows on re-fetch
     try {
       const token = localStorage.getItem('token');
+      
+      // Build Query Params
+      const params = {};
+      if (filterDate) params.date = filterDate;
+      if (startHour) params.start_hour = startHour;
+      if (endHour) params.end_hour = endHour;
+
       const response = await axios.get('http://localhost:8000/api/transactions', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        params: params // Axios sends these as ?date=...&start_hour=...
       });
       setTransactions(response.data);
+      setCurrentPage(1); // Reset to page 1 on new filter
     } catch (error) {
       console.error("Error fetching history", error);
     } finally {
@@ -49,8 +67,14 @@ const Riwayat = () => {
     }
   };
 
+  // Initial Load
   useEffect(() => {
     fetchHistory();
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Close export menu on outside click
+  useEffect(() => {
     function handleClickOutside(event) {
         if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
             setShowExportMenu(false);
@@ -59,6 +83,24 @@ const Riwayat = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleResetFilter = () => {
+    setFilterDate('');
+    setStartHour('');
+    setEndHour('');
+    // We need to trigger fetch, but state updates are async. 
+    // Best way: call a separate function or useEffect dependency, 
+    // but here we can just reload window or manually call axios with empty params.
+    // Let's manually trigger fetch with empty vals:
+    const token = localStorage.getItem('token');
+    setLoading(true);
+    axios.get('http://localhost:8000/api/transactions', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => {
+            setTransactions(res.data);
+            setCurrentPage(1);
+        })
+        .finally(() => setLoading(false));
+  };
 
   // --- PAGINATION LOGIC ---
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -71,17 +113,13 @@ const Riwayat = () => {
   // --- EXPORT LOGIC ---
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
-    // Header
     doc.setFontSize(18);
-    doc.setTextColor(48, 127, 226); // Mantra Blue
+    doc.setTextColor(48, 127, 226);
     doc.text("Mantra - Laporan Penjualan", 14, 22);
-    
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Tanggal Export: ${new Date().toLocaleDateString('id-ID')}`, 14, 30);
 
-    // Table Data
     const tableColumn = ["ID Transaksi", "Waktu", "Total Belanja", "Uang Diterima", "Kembalian"];
     const tableRows = transactions.map(trx => [
         trx.kode_transaksi,
@@ -118,7 +156,6 @@ const Riwayat = () => {
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Penjualan");
-    
     XLSX.writeFile(workbook, `Laporan_Mantra_${new Date().getTime()}.xlsx`);
     setShowExportMenu(false);
   };
@@ -162,6 +199,77 @@ const Riwayat = () => {
         </div>
       </div>
 
+      {/* FILTER BAR SECTION */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-top-4">
+         <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm w-full md:w-auto">
+            <Filter size={18} className="text-[#ffad00]" />
+            Filter Data:
+         </div>
+         
+         <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+             {/* Date Picker - Styled to look like custom UI */}
+             <div className="relative group">
+                <input 
+                    type="date" 
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all cursor-pointer"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    onKeyDown={(e) => e.preventDefault()} // Prevents typing, forces click
+                />
+                <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-[#ffad00] transition-colors" />
+             </div>
+
+             {/* Start Hour */}
+             <div className="relative group">
+                <select 
+                    className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all appearance-none cursor-pointer"
+                    value={startHour}
+                    onChange={(e) => setStartHour(e.target.value)}
+                >
+                    <option value="">Jam Mulai</option>
+                    {hourOptions.map(hour => (
+                        <option key={`start-${hour}`} value={hour}>{hour}:00</option>
+                    ))}
+                </select>
+                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-[#ffad00] transition-colors" />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+             </div>
+
+             {/* End Hour */}
+             <div className="relative group">
+                <select 
+                    className="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all appearance-none cursor-pointer"
+                    value={endHour}
+                    onChange={(e) => setEndHour(e.target.value)}
+                >
+                    <option value="">Jam Selesai</option>
+                    {hourOptions.map(hour => (
+                        <option key={`end-${hour}`} value={hour}>{hour}:00</option>
+                    ))}
+                </select>
+                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-[#ffad00] transition-colors" />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+             </div>
+
+             {/* Action Buttons */}
+             <div className="flex gap-2">
+                 <button 
+                    onClick={fetchHistory}
+                    className="flex-1 bg-[#307fe2] hover:bg-blue-700 text-white rounded-xl py-2 px-3 text-sm font-semibold transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2 active:scale-95"
+                 >
+                    <Search size={16} /> Cari
+                 </button>
+                 <button 
+                    onClick={handleResetFilter}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl py-2 px-3 transition-all flex items-center justify-center active:scale-95"
+                    title="Reset Filter"
+                 >
+                    <RotateCcw size={16} />
+                 </button>
+             </div>
+         </div>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -189,12 +297,11 @@ const Riwayat = () => {
                        <td colSpan="5" className="text-center py-12 text-slate-400">
                            <div className="flex flex-col items-center gap-2">
                                <Receipt size={32} className="opacity-50"/>
-                               <p>Belum ada transaksi tercatat.</p>
+                               <p>Belum ada transaksi {filterDate ? 'pada tanggal ini' : 'tercatat'}.</p>
                            </div>
                        </td>
                    </tr>
                 ) : (
-                    // USE PAGINATED ITEMS HERE
                     currentItems.map((trx) => (
                         <tr key={trx.id} className="hover:bg-blue-50/30 transition-colors group">
                             <td className="px-6 py-4">
@@ -232,47 +339,34 @@ const Riwayat = () => {
 
              {/* Controls */}
              <div className="flex items-center gap-1">
-                {/* First Page */}
                 <button 
                    onClick={() => paginate(1)} 
                    disabled={currentPage === 1}
                    className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Halaman Pertama"
                 >
                    <ChevronsLeft size={18} />
                 </button>
-                
-                {/* Previous */}
                 <button 
                    onClick={() => paginate(currentPage - 1)} 
                    disabled={currentPage === 1}
                    className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Sebelumnya"
                 >
                    <ChevronLeft size={18} />
                 </button>
-
-                {/* Page Indicator */}
                 <div className="px-4 py-2 bg-[#307fe2]/10 text-[#307fe2] font-bold text-sm rounded-lg">
                    {currentPage}
                 </div>
-
-                {/* Next */}
                 <button 
                    onClick={() => paginate(currentPage + 1)} 
                    disabled={currentPage === totalPages}
                    className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Selanjutnya"
                 >
                    <ChevronRight size={18} />
                 </button>
-
-                {/* Last Page */}
                 <button 
                    onClick={() => paginate(totalPages)} 
                    disabled={currentPage === totalPages}
                    className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
-                   title="Halaman Terakhir"
                 >
                    <ChevronsRight size={18} />
                 </button>
