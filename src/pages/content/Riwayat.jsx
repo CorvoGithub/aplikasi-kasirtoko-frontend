@@ -5,13 +5,21 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { 
-  Eye, Calendar, Clock, X, Printer, Download, CheckCircle2, Receipt, FileSpreadsheet, FileText, ChevronDown
+  Eye, Calendar, Clock, X, Printer, Download, CheckCircle2, Receipt, FileSpreadsheet, FileText, ChevronDown,
+  ChevronLeft,      // NEW
+  ChevronRight,     // NEW
+  ChevronsLeft,     // NEW
+  ChevronsRight     // NEW
 } from 'lucide-react';
 
 const Riwayat = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   // Modal & Dropdown State
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,8 +60,15 @@ const Riwayat = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- EXPORT LOGIC ---
+  // --- PAGINATION LOGIC ---
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = transactions.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
 
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // --- EXPORT LOGIC ---
   const exportToPDF = () => {
     const doc = new jsPDF();
     
@@ -147,7 +162,7 @@ const Riwayat = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200">
@@ -161,7 +176,6 @@ const Riwayat = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  /* --- UPDATED LOADING STATE --- */
                   <tr>
                     <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
                       <div className="flex justify-center items-center gap-2">
@@ -180,7 +194,8 @@ const Riwayat = () => {
                        </td>
                    </tr>
                 ) : (
-                    transactions.map((trx) => (
+                    // USE PAGINATED ITEMS HERE
+                    currentItems.map((trx) => (
                         <tr key={trx.id} className="hover:bg-blue-50/30 transition-colors group">
                             <td className="px-6 py-4">
                                 <div className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded w-fit">{trx.kode_transaksi}</div>
@@ -206,6 +221,64 @@ const Riwayat = () => {
               </tbody>
             </table>
         </div>
+
+        {/* PAGINATION FOOTER */}
+        {!loading && transactions.length > 0 && (
+          <div className="bg-white px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+             {/* Text Info */}
+             <div className="text-sm text-slate-500">
+                Menampilkan <span className="font-semibold text-slate-800">{indexOfFirstItem + 1}</span> - <span className="font-semibold text-slate-800">{Math.min(indexOfLastItem, transactions.length)}</span> dari <span className="font-semibold text-slate-800">{transactions.length}</span> transaksi
+             </div>
+
+             {/* Controls */}
+             <div className="flex items-center gap-1">
+                {/* First Page */}
+                <button 
+                   onClick={() => paginate(1)} 
+                   disabled={currentPage === 1}
+                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
+                   title="Halaman Pertama"
+                >
+                   <ChevronsLeft size={18} />
+                </button>
+                
+                {/* Previous */}
+                <button 
+                   onClick={() => paginate(currentPage - 1)} 
+                   disabled={currentPage === 1}
+                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
+                   title="Sebelumnya"
+                >
+                   <ChevronLeft size={18} />
+                </button>
+
+                {/* Page Indicator */}
+                <div className="px-4 py-2 bg-[#307fe2]/10 text-[#307fe2] font-bold text-sm rounded-lg">
+                   {currentPage}
+                </div>
+
+                {/* Next */}
+                <button 
+                   onClick={() => paginate(currentPage + 1)} 
+                   disabled={currentPage === totalPages}
+                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
+                   title="Selanjutnya"
+                >
+                   <ChevronRight size={18} />
+                </button>
+
+                {/* Last Page */}
+                <button 
+                   onClick={() => paginate(totalPages)} 
+                   disabled={currentPage === totalPages}
+                   className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#307fe2] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all"
+                   title="Halaman Terakhir"
+                >
+                   <ChevronsRight size={18} />
+                </button>
+             </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && selectedTransaction && (
