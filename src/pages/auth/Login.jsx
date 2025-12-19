@@ -1,10 +1,12 @@
 // src/pages/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Store, ArrowRight, TrendingUp, Package, CreditCard, FileBox, FolderClock} from 'lucide-react';
-import { toast } from 'sonner';
+import { 
+  Eye, EyeOff, Mail, Lock, Store, ArrowRight, FileBox, FolderClock, 
+  Check, AlertCircle 
+} from 'lucide-react';
 
-// Slider content - Kept simple
+// Slider content
 const loginSlides = [
   {
     id: 1,
@@ -14,7 +16,7 @@ const loginSlides = [
   },
   {
     id: 2,
-    title: "Manajemen Barang & Penjualan Terintegrasi",
+    title: "Manajemen Barang & Penjualan",
     description: "Tambahkan barang, atur harga jual, dan lakukan transaksi penjualan dengan perhitungan otomatis dalam satu sistem.",
     icon: FileBox,
   },
@@ -32,22 +34,51 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 
-  // --- LOGIC: SLIDER ---
+  // Slider State
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [prevSlide, setPrevSlide] = useState(-1);
+
+  // Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success', isExiting: false });
+
+  // --- LOGIC: SLIDER (SWIPE EFFECT) ---
   useEffect(() => {
     const interval = setInterval(() => {
+      setPrevSlide(currentSlide);
       setCurrentSlide((prev) => (prev + 1) % loginSlides.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentSlide]);
+
+  // --- LOGIC: TOAST NOTIFICATION ---
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type, isExiting: false });
+  };
+
+  useEffect(() => {
+    if (toast.show) {
+      const exitTimer = setTimeout(() => {
+        setToast(prev => ({ ...prev, isExiting: true }));
+      }, 2700);
+
+      const removeTimer = setTimeout(() => {
+        setToast(prev => ({ ...prev, show: false, isExiting: false }));
+      }, 3000);
+
+      return () => {
+        clearTimeout(exitTimer);
+        clearTimeout(removeTimer);
+      };
+    }
+  }, [toast.show]);
 
   // --- LOGIC: AUTHENTICATION ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error('Data tidak lengkap', { description: 'Mohon isi email dan password.' });
+      triggerToast('Mohon isi email dan password.', 'error');
       return;
     }
 
@@ -61,29 +92,56 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success(`Selamat datang, ${data.user.name}`);
+        triggerToast(`Selamat datang, ${data.user.name}`, 'success');
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setTimeout(() => navigate('/dashboard'), 800);
       } else {
-        toast.error('Login Gagal', { description: data.message || 'Cek kembali kredensial anda.' });
+        triggerToast(data.message || 'Login Gagal. Cek kredensial anda.', 'error');
       }
       //eslint-disable-next-line no-unused-vars
     } catch (err) {
-      toast.error('Koneksi Error', { description: 'Gagal menghubungi server.' });
+      triggerToast('Gagal menghubungi server.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // --- UI RENDER ---
   return (
-    <div className="min-h-screen flex bg-white font-sans text-slate-800">
+    <div className="min-h-screen flex bg-white font-sans text-slate-800 relative">
       
-      {/* LEFT SIDE (30% Color Rule - Brand Blue) */}
-      {/* Principle: Hierarchy & Consistency */}
+      {/* ================= CUSTOM TOAST ================= */}
+      {toast.show && (
+        <div className="fixed top-6 left-0 w-full flex justify-center z-100 pointer-events-none">
+           <div 
+             className={`pointer-events-auto bg-white border shadow-xl rounded-full px-6 py-3 flex items-center gap-3 relative overflow-hidden ${
+               toast.type === 'error' ? 'border-red-100 shadow-red-500/10' : 'border-slate-200 shadow-slate-200/50'
+             } ${
+               toast.isExiting 
+                 ? 'animate-[slideUp_0.5s_ease-in_forwards]' 
+                 : 'animate-[slideDown_0.5s_ease-out_forwards]'
+             }`}
+           >
+              <div className={`p-1 rounded-full relative z-10 ${
+                  toast.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
+              }`}>
+                 {toast.type === 'error' ? <AlertCircle size={14} strokeWidth={3} /> : <Check size={14} strokeWidth={3} />}
+              </div>
+              
+              <span className="text-slate-700 font-medium text-sm relative z-10 pr-2">
+                {toast.message}
+              </span>
+
+              <div className={`absolute bottom-0 left-0 h-[3px] w-full animate-[shrink_3s_linear_forwards] ${
+                  toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+              }`} />
+           </div>
+        </div>
+      )}
+
+      {/* LEFT SIDE (30% - Brand Blue) */}
       <div className="hidden lg:flex lg:w-5/12 bg-[#307fe2] relative overflow-hidden flex-col justify-between p-12 text-white">
-        {/* Abstract Pattern Overlay for texture */}
+        {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10" 
              style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
         </div>
@@ -91,44 +149,45 @@ const Login = () => {
         {/* Brand */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-            <img
-              src="/images/m_white.png"
-              alt="Mantra"
-              className="w-6 h-6 object-contain"
-            />
+            <img src="/images/m_white.png" alt="Mantra" className="w-6 h-6 object-contain" />
           </div>
-          <span className="text-xl font-bold tracking-wide">Mantra</span>
+          <span className="text-xl font-semibold tracking-wide">Mantra</span>
         </div>
 
-        {/* Slider */}
-        <div className="relative z-10 mt-auto mb-20">
-          {loginSlides.map((slide, index) => (
-            <div
-              key={slide.id}
-              className={`transition-all duration-700 absolute bottom-0 left-0 right-0 ${
-                index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'
-              }`}
-            >
-              <div className="mb-6 inline-block p-3 bg-white/10 rounded-2xl text-white">
-                <slide.icon className="w-8 h-8" />
-              </div>
-              <h2 className="text-3xl font-bold mb-4 leading-tight">
-                {slide.title}
-              </h2>
-              <p className="text-blue-100 text-lg leading-relaxed opacity-90">
-                {slide.description}
-              </p>
-            </div>
-          ))}
-          {/* Spacer to hold height */}
-          <div className="opacity-0 pointer-events-none">
-             <h2 className="text-3xl font-bold mb-4">Placeholder</h2>
-             <p className="text-lg">Placeholder content for height</p>
-          </div>
+        {/* SWIPE SLIDER CONTAINER */}
+        {/* Added ease-out-back for a nice "landing" effect */}
+        <div className="relative z-10 mt-auto mb-20 h-48 w-full animate-[entryUp_1s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+          {loginSlides.map((slide, index) => {
+            // Determine Position Logic
+            let positionClass = 'translate-x-full opacity-0 pointer-events-none';
+            
+            if (index === currentSlide) {
+                positionClass = 'translate-x-0 opacity-100'; 
+            } else if (index === prevSlide) {
+                positionClass = '-translate-x-full opacity-0 pointer-events-none'; 
+            }
+
+            return (
+                <div
+                key={slide.id}
+                className={`absolute top-0 left-0 right-0 transition-all duration-700 ease-in-out ${positionClass}`}
+                >
+                <div className="mb-6 inline-block p-3 bg-white/10 rounded-2xl text-white">
+                    <slide.icon className="w-8 h-8" />
+                </div>
+                <h2 className="text-3xl font-bold mb-4 leading-tight">
+                    {slide.title}
+                </h2>
+                <p className="text-blue-100 text-lg leading-relaxed opacity-90">
+                    {slide.description}
+                </p>
+                </div>
+            );
+          })}
         </div>
 
         {/* Indicators */}
-        <div className="relative z-10 flex gap-2">
+        <div className="relative z-10 flex gap-2 animate-[entryUp_1s_cubic-bezier(0.16,1,0.3,1)_0.1s_forwards] opacity-0">
           {loginSlides.map((_, idx) => (
             <div 
               key={idx} 
@@ -140,25 +199,22 @@ const Login = () => {
         </div>
       </div>
 
-      {/* RIGHT SIDE (60% Color Rule - White/Neutral) */}
+      {/* RIGHT SIDE (60% - Content) */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-24 bg-white">
         <div className="w-full max-w-md space-y-8">
           
-          {/* Mobile Logo (Visible only on small screens) */}
           <div className="lg:hidden flex items-center gap-2 mb-8 text-[#307fe2]">
             <Store className="w-8 h-8" />
             <span className="text-2xl font-bold">Mantra</span>
           </div>
 
-          {/* Header */}
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Selamat Datang</h1>
             <p className="text-slate-500">Masuk untuk mengelola toko Anda.</p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6 mt-8">
-            {/* Email Field */}
+            {/* Email */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700" htmlFor="email">Email</label>
               <div className="relative group">
@@ -177,7 +233,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-sm font-semibold text-slate-700" htmlFor="password">Password</label>
@@ -208,7 +264,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Primary Button (30% Color usage) */}
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
@@ -230,7 +286,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200"></div>
@@ -240,7 +295,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Secondary Action - Uses the Accent Color (10%) for emphasis without overwhelming */}
           <div className="text-center">
             <p className="text-slate-600 text-sm mb-3">Belum memiliki akun toko?</p>
             <Link 
@@ -252,6 +306,27 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Inline Animations */}
+      <style>{`
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-150%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-150%); }
+        }
+        @keyframes shrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        /* DRASTIC ENTRY UP ANIMATION */
+        @keyframes entryUp {
+            from { opacity: 0; transform: translateY(150%); } /* Starts WAY below */
+            to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };

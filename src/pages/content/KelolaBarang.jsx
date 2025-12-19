@@ -208,7 +208,7 @@ const KelolaBarang = () => {
       {/* ================= MINIMAL TOAST NOTIFICATION (Fixed Centering) ================= */}
       {showSuccess && (
         // 1. Container: Full width, fixed top, Flex center. This guarantees centering.
-        <div className="fixed top-6 left-0 w-full flex justify-center z-[100] pointer-events-none">
+        <div className="fixed top-6 left-0 w-full flex justify-center z-100 pointer-events-none">
            
            {/* 2. The Toast Pill: Pointer events auto so you can click/hover it */}
            <div 
