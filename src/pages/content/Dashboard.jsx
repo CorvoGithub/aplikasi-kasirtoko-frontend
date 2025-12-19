@@ -87,7 +87,8 @@ const Dashboard = () => {
   if (loading) {
     return (
         <div className="flex items-center justify-center h-[80vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#307fe2]"></div>
+            {/* UPDATED LOADING SPINNER (Same style as others, same size as before, no text) */}
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#307fe2] border-t-transparent"></div>
         </div>
     );
   }
@@ -219,7 +220,7 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* LIVE CLOCK WIDGET (Updated with Seconds) */}
+          {/* LIVE CLOCK WIDGET */}
           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center h-48 relative overflow-hidden group">
              {/* Background decoration */}
              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>

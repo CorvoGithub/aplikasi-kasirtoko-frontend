@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable'; // CHANGED: Import as named/default object
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { 
   Eye, Calendar, Clock, X, Printer, Download, CheckCircle2, Receipt, FileSpreadsheet, FileText, ChevronDown
@@ -76,7 +76,6 @@ const Riwayat = () => {
         formatRupiah(trx.kembalian),
     ]);
 
-    // FIXED: Use autoTable as a function passing 'doc'
     autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
@@ -162,7 +161,15 @@ const Riwayat = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                   <tr><td colSpan="5" className="text-center py-12 text-slate-400">Memuat data...</td></tr>
+                  /* --- UPDATED LOADING STATE --- */
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                      <div className="flex justify-center items-center gap-2">
+                        <div className="animate-spin h-5 w-5 border-2 border-[#307fe2] border-t-transparent rounded-full"></div>
+                        <span>Memuat Data...</span>
+                      </div>
+                    </td>
+                  </tr>
                 ) : transactions.length === 0 ? (
                    <tr>
                        <td colSpan="5" className="text-center py-12 text-slate-400">
