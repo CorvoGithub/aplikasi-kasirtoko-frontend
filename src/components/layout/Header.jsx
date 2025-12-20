@@ -20,12 +20,15 @@ const Header = ({ toggleSidebar }) => {
   const [showSearch, setShowSearch] = useState(false);
   const searchRef = useRef(null);
 
+  // --- LOGOUT STATE ---
+  const [logoutLoading, setLogoutLoading] = useState(false); // NEW STATE
+
   // Searchable Menu Items
   const menuItems = [
     { label: 'Dashboard Utama', path: '/dashboard/main', category: 'Menu' },
     { label: 'Halaman Penjualan', path: '/dashboard/penjualan', category: 'Transaksi' },
     { label: 'Kelola Barang', path: '/dashboard/kelola', category: 'Inventory' },
-    { label: 'Tambah Produk', path: '/dashboard/kelola', category: 'Action' }, // Shortcut to same page
+    { label: 'Tambah Produk', path: '/dashboard/kelola', category: 'Action' },
     { label: 'Riwayat Transaksi', path: '/dashboard/riwayat', category: 'Laporan' },
   ];
 
@@ -62,7 +65,6 @@ const Header = ({ toggleSidebar }) => {
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  // Close search when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -79,20 +81,22 @@ const Header = ({ toggleSidebar }) => {
       setSearchQuery('');
   };
 
-  // 3. Logout Logic
+  // 3. Logout Logic (Updated)
   const handleLogout = async () => {
+    setLogoutLoading(true); // Start loading
     try {
         const token = localStorage.getItem('token');
         await axios.post('http://localhost:8000/api/logout', {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        //eslint-disable-next-line no-unused-vars
     } catch (error) {
-        console.error("Logout failed");
+        console.error("Logout failed", error);
     } finally {
+        // Clear data and redirect regardless of API success/fail
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         navigate('/login');
+        setLogoutLoading(false); // Stop loading (though component will unmount)
     }
   };
 
@@ -206,12 +210,26 @@ const Header = ({ toggleSidebar }) => {
 
             <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
 
+            {/* LOGOUT BUTTON WITH LOADING STATE */}
             <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                disabled={logoutLoading}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-                <LogOut size={18} />
-                <span className="hidden sm:inline">Keluar</span>
+                {logoutLoading ? (
+                    <>
+                        <svg className="animate-spin h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="hidden sm:inline"></span>
+                    </>
+                ) : (
+                    <>
+                        <LogOut size={18} />
+                        <span className="hidden sm:inline">Keluar</span>
+                    </>
+                )}
             </button>
           </div>
         </div>

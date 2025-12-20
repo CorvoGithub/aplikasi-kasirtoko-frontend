@@ -86,9 +86,13 @@ const Login = () => {
     try {
       const response = await fetch('http://localhost:8000/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json' // <--- CRITICAL FIX
+        },
         body: JSON.stringify({ email, password }),
       });
+      
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -97,10 +101,16 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(data.user));
         setTimeout(() => navigate('/dashboard'), 800);
       } else {
-        triggerToast(data.message || 'Login Gagal. Cek kredensial anda.', 'error');
+        // Handle specific Laravel error codes
+        if (response.status === 422 || response.status === 401) {
+            triggerToast('Email atau password tidak sesuai.', 'error');
+        } else {
+            triggerToast(data.message || 'Terjadi kesalahan.', 'error');
+        }
+        setPassword(''); // Clear password on error
       }
-      //eslint-disable-next-line no-unused-vars
     } catch (err) {
+      console.error("Login Error:", err); // Log the actual error to console for debugging
       triggerToast('Gagal menghubungi server.', 'error');
     } finally {
       setLoading(false);

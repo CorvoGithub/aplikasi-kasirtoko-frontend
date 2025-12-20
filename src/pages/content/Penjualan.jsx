@@ -1,21 +1,14 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/Penjualan.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { useNavigate } from 'react-router-dom'; 
 import { 
-  Search, 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Package, 
-  ImageIcon, 
-  AlertCircle,
-  Banknote,
-  ChevronRight,
-  Check,       
-  X,           
-  Printer      
+  Search, ShoppingCart, Plus, Minus, Trash2, Package, ImageIcon, 
+  AlertCircle, Banknote, ChevronRight, Check, Printer 
 } from 'lucide-react';
+
+// 1. IMPORT THE PRINT COMPONENT
+import StrukPrint from '../../components/others/StrukPrint';
 
 const Penjualan = () => {
   // --- STATE ---
@@ -26,24 +19,21 @@ const Penjualan = () => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // New State for Modal
+  // Modal & Receipt State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [lastTransaction, setLastTransaction] = useState({
-    total: 0,
-    cash: 0,
-    change: 0
-  });
+  const [lastTransaction, setLastTransaction] = useState(null); // Stores data for the receipt
 
-  // 2. Initialize Navigate Hook
+  // Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success', isExiting: false });
+
+  //eslint-disable-next-line no-unused-vars
   const navigate = useNavigate();
+  const componentRef = useRef(); // Ref for the hidden print component
 
   // --- HELPERS ---
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
     }).format(number);
   };
 
@@ -51,6 +41,19 @@ const Penjualan = () => {
     if (!formattedString) return 0;
     return parseInt(formattedString.replace(/\D/g, '')) || 0;
   };
+
+  // --- TOAST LOGIC ---
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type, isExiting: false });
+  };
+
+  useEffect(() => {
+    if (toast.show) {
+      const exitTimer = setTimeout(() => setToast(prev => ({ ...prev, isExiting: true })), 2700);
+      const removeTimer = setTimeout(() => setToast(prev => ({ ...prev, show: false, isExiting: false })), 3000);
+      return () => { clearTimeout(exitTimer); clearTimeout(removeTimer); };
+    }
+  }, [toast.show]);
 
   // --- DATA FETCHING ---
   const fetchProducts = async () => {
@@ -63,6 +66,7 @@ const Penjualan = () => {
       setProducts(response.data);
     } catch (error) {
       console.error("Error fetching products", error);
+      triggerToast("Gagal memuat produk", "error");
     } finally {
       setLoading(false);
     }
@@ -70,17 +74,20 @@ const Penjualan = () => {
 
   useEffect(() => {
     fetchProducts();
+    //eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- CART LOGIC ---
   const addToCart = (product) => {
-    if (product.stok <= 0) return;
+    if (product.stok <= 0) {
+        return triggerToast(`Stok ${product.nama_produk} habis!`, 'error');
+    }
 
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {
         if(existingItem.qty + 1 > product.stok) {
-            alert("Stok tidak mencukupi");
+            triggerToast("Stok tidak mencukupi", 'error');
             return prevCart;
         }
         return prevCart.map(item => 
@@ -98,7 +105,7 @@ const Penjualan = () => {
           const newQty = item.qty + change;
           if (newQty < 1) return item; 
           if (newQty > item.stok) {
-             alert("Mencapai batas stok");
+             triggerToast("Mencapai batas stok", 'error');
              return item;
           }
           return { ...item, qty: newQty };
@@ -124,15 +131,14 @@ const Penjualan = () => {
 
   // --- CALCULATIONS ---
   const grandTotal = cart.reduce((sum, item) => sum + (item.harga_jual * item.qty), 0);
-  //eslint-disable-next-line no-unused-vars
-  const changeAmount = getNumericCash(cashReceived) - grandTotal;
 
-  // --- CHECKOUT ---
+  // --- CHECKOUT & PRINT LOGIC ---
   const handleCheckout = async () => {
     const numericCash = getNumericCash(cashReceived);
 
-    if (cart.length === 0) return alert("Keranjang kosong!");
-    if (numericCash < grandTotal) return alert("Uang kurang!");
+    // 1. Validation
+    if (cart.length === 0) return triggerToast("Keranjang belanja kosong!", "error");
+    if (numericCash < grandTotal) return triggerToast("Uang pembayaran kurang!", "error");
 
     setProcessing(true);
     try {
@@ -142,22 +148,45 @@ const Penjualan = () => {
         uang_diberikan: numericCash
       };
 
-      await axios.post('http://localhost:8000/api/transactions', payload, {
-        headers: { Authorization: `Bearer ${token}` }
+      // 2. Call API
+      const response = await axios.post('http://localhost:8000/api/transactions', payload, {
+        headers: { 
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json' 
+        }
       });
 
-      setLastTransaction({
-        total: grandTotal,
-        cash: numericCash,
-        change: numericCash - grandTotal
-      });
+      // 3. PREPARE RECEIPT DATA *BEFORE* CLEARING CART
+      const user = JSON.parse(localStorage.getItem('user'));
+      
+      const receiptData = {
+          store_name: user?.store_name || "Mantra Store",
+          store_address: user?.address || "Jl. Alamat Toko Belum Diisi",
+          store_phone: user?.phone || "Telp: -",
+          invoice: response.data.transaksi.kode_transaksi,
+          cashier: user?.name,
+          date: new Date(),
+          items: cart.map(item => ({
+              name: item.nama_produk,
+              qty: item.qty,
+              price: item.harga_jual
+          })),
+          total: grandTotal,
+          cash: numericCash,
+          change: numericCash - grandTotal
+      };
 
+      setLastTransaction(receiptData);
       setShowSuccessModal(true);
-      fetchProducts(); 
+      fetchProducts(); // Refresh stock from server
 
     } catch (error) {
       console.error("Checkout failed", error);
-      alert(error.response?.data?.message || "Transaksi Gagal");
+      if (error.response?.data?.message) {
+          triggerToast(error.response.data.message, "error");
+      } else {
+          triggerToast("Terjadi kesalahan transaksi", "error");
+      }
     } finally {
       setProcessing(false);
     }
@@ -167,6 +196,11 @@ const Penjualan = () => {
     setShowSuccessModal(false);
     setCart([]);
     setCashReceived('');
+    setLastTransaction(null);
+  };
+
+  const handlePrint = () => {
+      window.print();
   };
 
   const handleKeyDown = (e) => {
@@ -185,54 +219,86 @@ const Penjualan = () => {
   return (
     <div className="p-6 lg:p-8 h-[calc(100vh-10px)] max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 relative">
       
-      {/* ================= SUCCESS MODAL ================= */}
-      {showSuccessModal && (
+      {/* 1. HIDDEN RECEIPT COMPONENT (Visible only during print) */}
+      <StrukPrint ref={componentRef} data={lastTransaction} />
+
+      {/* 2. CUSTOM TOAST */}
+      {toast.show && (
+        <div className="fixed top-6 left-0 w-full flex justify-center z-100 pointer-events-none">
+           <div 
+             className={`pointer-events-auto bg-white border shadow-xl rounded-full px-6 py-3 flex items-center gap-3 relative overflow-hidden ${
+               toast.type === 'error' ? 'border-red-100 shadow-red-500/10' : 'border-slate-200 shadow-slate-200/50'
+             } ${
+               toast.isExiting 
+                 ? 'animate-[slideUp_0.4s_ease-in_forwards]' 
+                 : 'animate-[slideDown_0.4s_ease-out_forwards]'
+             }`}
+           >
+              <div className={`p-1 rounded-full relative z-10 ${
+                  toast.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
+              }`}>
+                 {toast.type === 'error' ? <AlertCircle size={14} strokeWidth={3} /> : <Check size={14} strokeWidth={3} />}
+              </div>
+              <span className="text-slate-700 font-medium text-sm relative z-10 pr-2">
+                {toast.message}
+              </span>
+              <div className={`absolute bottom-0 left-0 h-[3px] w-full animate-[shrink_3s_linear_forwards] ${
+                  toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+              }`} />
+           </div>
+        </div>
+      )}
+
+      {/* 3. REDESIGNED SUCCESS MODAL (Blue Theme) */}
+      {showSuccessModal && lastTransaction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
               
-              {/* Modal Header */}
-              <div className="bg-emerald-50 p-6 flex flex-col items-center justify-center border-b border-emerald-100">
-                 <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3 shadow-sm">
-                    <Check size={32} strokeWidth={3} />
+              {/* Header: Brand Blue */}
+              <div className="bg-[#307fe2] p-6 text-center text-white relative overflow-hidden">
+                 <div className="relative z-10">
+                    <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm border border-white/20">
+                        <Check size={32} strokeWidth={4} />
+                    </div>
+                    <h2 className="text-xl font-bold">Transaksi Berhasil</h2>
+                    <p className="text-blue-100 text-sm mt-1">{lastTransaction.invoice}</p>
                  </div>
-                 <h2 className="text-xl font-bold text-slate-800">Transaksi Berhasil!</h2>
-                 <p className="text-slate-500 text-sm">Pembayaran telah terverifikasi</p>
+                 {/* Background Pattern */}
+                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
               </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                 <div className="space-y-2">
+              {/* Body */}
+              <div className="p-6 bg-slate-50">
+                 <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
                     <div className="flex justify-between text-sm">
                        <span className="text-slate-500">Total Tagihan</span>
-                       <span className="font-semibold text-slate-800">{formatRupiah(lastTransaction.total)}</span>
+                       <span className="font-bold text-slate-800">{formatRupiah(lastTransaction.total)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                       <span className="text-slate-500">Uang Diterima</span>
-                       <span className="font-semibold text-slate-800">{formatRupiah(lastTransaction.cash)}</span>
+                       <span className="text-slate-500">Tunai</span>
+                       <span className="font-medium text-slate-800">{formatRupiah(lastTransaction.cash)}</span>
                     </div>
-                    <div className="border-t border-dashed border-slate-200 my-2"></div>
-                    <div className="flex justify-between items-center">
+                    <div className="border-t border-dashed border-slate-200 my-1"></div>
+                    <div className="flex justify-between text-base">
                        <span className="text-slate-800 font-bold">Kembalian</span>
-                       <span className="text-xl font-bold text-emerald-600">{formatRupiah(lastTransaction.change)}</span>
+                       <span className="font-bold text-[#307fe2]">{formatRupiah(lastTransaction.change)}</span>
                     </div>
                  </div>
 
-                 {/* Action Buttons */}
-                 <div className="grid grid-cols-1 gap-3 mt-6">
-                    {/* 3. Updated Button to Navigate to Riwayat */}
+                 {/* Buttons */}
+                 <div className="grid grid-cols-2 gap-3 mt-6">
                     <button 
-                        onClick={() => navigate('/dashboard/riwayat')} 
-                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
+                        onClick={handlePrint} 
+                        className="flex items-center justify-center gap-2 py-3 bg-white border-2 border-slate-200 hover:border-[#307fe2] hover:text-[#307fe2] text-slate-600 rounded-xl font-bold transition-all"
                     >
-                       <Printer size={18} />
-                       <span>Cetak Struk</span>
+                       <Printer size={18} /> Cetak
                     </button>
 
                     <button 
                        onClick={handleCloseModal}
-                       className="w-full py-3 bg-[#307fe2] hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 transition-all active:scale-95"
+                       className="py-3 bg-[#307fe2] hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 transition-all"
                     >
-                       Transaksi Baru
+                      Selesai
                     </button>
                  </div>
               </div>
@@ -240,7 +306,7 @@ const Penjualan = () => {
         </div>
       )}
 
-      {/* ================= LEFT COLUMN: PRODUCT CATALOG (65%) ================= */}
+      {/* ================= LEFT COLUMN: PRODUCT CATALOG ================= */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         
         {/* Header Section */}
@@ -327,7 +393,7 @@ const Penjualan = () => {
         </div>
       </div>
 
-      {/* ================= RIGHT COLUMN: CART (35%) ================= */}
+      {/* ================= RIGHT COLUMN: CART ================= */}
       <div className="w-full lg:w-96 flex flex-col h-full bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 z-20">
         
         {/* Cart Header */}
@@ -412,11 +478,7 @@ const Penjualan = () => {
                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#ffad00] transition-colors">
                     <Banknote size={18} />
                  </div>
-                 
-                 <div className="absolute left-10 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">
-                    Rp
-                 </div>
-
+                 <div className="absolute left-10 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">Rp</div>
                  <input 
                    type="text" 
                    inputMode="numeric"
@@ -461,6 +523,13 @@ const Penjualan = () => {
            </div>
         </div>
       </div>
+
+      {/* Inline Animations */}
+      <style>{`
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-150%); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-150%); } }
+        @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+      `}</style>
     </div>
   );
 };

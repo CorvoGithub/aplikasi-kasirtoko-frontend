@@ -122,3 +122,44 @@ body,
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
 }
+
+/* =========================================
+   4. PRINT STYLES (Thermal Printer)
+   ========================================= */
+@media print {
+  /* 1. Hide everything initially */
+  body * {
+    visibility: hidden;
+  }
+
+  /* 2. Make the Receipt Visible */
+  /* We use !important to override any Tailwind utility classes */
+  #printable-struk, #printable-struk * {
+    visibility: visible !important;
+  }
+
+  /* 3. Position the Struk absolutely at the top-left */
+  #printable-struk {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%; /* Thermal printers usually treat width as 100% of the paper roll */
+    margin: 0;
+    padding: 0;
+    color: black !important; /* Ensure high contrast */
+    background-color: white; /* Ensure white background */
+    z-index: 9999; /* Force it on top */
+  }
+
+  /* 4. Reset Page Margins */
+  @page {
+    size: auto;
+    margin: 0mm; /* Crucial for thermal paper to avoid wasted space */
+  }
+
+  /* 5. Hide standard header/footer if browser adds them */
+  html, body {
+    height: auto;
+    overflow: visible;
+  }
+}

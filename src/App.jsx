@@ -12,11 +12,11 @@ import Register from "./pages/auth/Register";
 import Login from "./pages/auth/Login";
 import './App.css'
 
-//Content Imports
-
+// Content Imports
 import Penjualan from "./pages/content/Penjualan";
 import Kelola from "./pages/content/KelolaBarang";
 import Riwayat from "./pages/content/Riwayat";
+import ProfilToko from "./pages/content/ProfilToko";
 
 function App() {
   return (
@@ -45,6 +45,7 @@ function App() {
                 <Route path="penjualan" element={<Penjualan />} />
                 <Route path="kelola" element={<Kelola />} />
                 <Route path="riwayat" element={<Riwayat />} />
+                <Route path="profile" element={<ProfilToko />} />
 
               </Route>
             </Route> 

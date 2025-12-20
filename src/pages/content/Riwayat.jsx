@@ -10,6 +10,9 @@ import {
   Filter, RotateCcw, X, Search
 } from 'lucide-react';
 
+// IMPORT THE PRINT COMPONENT
+import StrukPrint from '../../components/others/StrukPrint';
+
 const Riwayat = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +30,10 @@ const Riwayat = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  
+  // Refs
   const exportMenuRef = useRef(null);
+  const componentRef = useRef(); // Ref for the hidden receipt component
 
   // Helper: Format Rupiah
   const formatRupiah = (number) => {
@@ -44,11 +50,10 @@ const Riwayat = () => {
   );
 
   const fetchHistory = async () => {
-    setLoading(true); // Ensure loading shows on re-fetch
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       
-      // Build Query Params
       const params = {};
       if (filterDate) params.date = filterDate;
       if (startHour) params.start_hour = startHour;
@@ -56,10 +61,10 @@ const Riwayat = () => {
 
       const response = await axios.get('http://localhost:8000/api/transactions', {
         headers: { Authorization: `Bearer ${token}` },
-        params: params // Axios sends these as ?date=...&start_hour=...
+        params: params
       });
       setTransactions(response.data);
-      setCurrentPage(1); // Reset to page 1 on new filter
+      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching history", error);
     } finally {
@@ -67,13 +72,11 @@ const Riwayat = () => {
     }
   };
 
-  // Initial Load
   useEffect(() => {
     fetchHistory();
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Close export menu on outside click
   useEffect(() => {
     function handleClickOutside(event) {
         if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
@@ -88,10 +91,6 @@ const Riwayat = () => {
     setFilterDate('');
     setStartHour('');
     setEndHour('');
-    // We need to trigger fetch, but state updates are async. 
-    // Best way: call a separate function or useEffect dependency, 
-    // but here we can just reload window or manually call axios with empty params.
-    // Let's manually trigger fetch with empty vals:
     const token = localStorage.getItem('token');
     setLoading(true);
     axios.get('http://localhost:8000/api/transactions', { headers: { Authorization: `Bearer ${token}` } })
@@ -160,6 +159,31 @@ const Riwayat = () => {
     setShowExportMenu(false);
   };
 
+  // --- PRINTING LOGIC ---
+  const user = JSON.parse(localStorage.getItem('user'));
+
+  // Transform the selected transaction into receipt-friendly format
+  const receiptData = selectedTransaction ? {
+      store_name: user?.store_name || "Mantra Store",
+      store_address: user?.address || "Jl. Alamat Toko Belum Diisi",
+      store_phone: user?.phone || "Telp: -",
+      invoice: selectedTransaction.kode_transaksi,
+      cashier: user?.name,
+      date: selectedTransaction.created_at,
+      items: selectedTransaction.transaksi_details.map(detail => ({
+          name: detail.produk ? detail.produk.nama_produk : "Produk Dihapus",
+          qty: detail.qty,
+          price: detail.harga_satuan
+      })),
+      total: selectedTransaction.total_harga,
+      cash: selectedTransaction.uang_diberikan,
+      change: selectedTransaction.kembalian
+  } : null;
+
+  const handlePrint = () => {
+      window.print();
+  };
+
   // --- RENDER ---
   const openDetail = (trx) => {
     setSelectedTransaction(trx);
@@ -170,7 +194,11 @@ const Riwayat = () => {
   const getTimePart = (dateString) => new Date(dateString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto relative">
+      
+      {/* 1. HIDDEN RECEIPT COMPONENT (Visible only on Print) */}
+      <StrukPrint ref={componentRef} data={receiptData} />
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
            <h1 className="text-2xl font-bold text-slate-900">Riwayat Transaksi</h1>
@@ -207,14 +235,14 @@ const Riwayat = () => {
          </div>
          
          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-             {/* Date Picker - Styled to look like custom UI */}
+             {/* Date Picker */}
              <div className="relative group">
                 <input 
                     type="date" 
                     className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:outline-none focus:border-[#ffad00] focus:ring-4 focus:ring-[#ffad00]/10 transition-all cursor-pointer"
                     value={filterDate}
                     onChange={(e) => setFilterDate(e.target.value)}
-                    onKeyDown={(e) => e.preventDefault()} // Prevents typing, forces click
+                    onKeyDown={(e) => e.preventDefault()} 
                 />
                 <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-focus-within:text-[#ffad00] transition-colors" />
              </div>
@@ -375,15 +403,17 @@ const Riwayat = () => {
         )}
       </div>
 
+      {/* DETAIL MODAL */}
       {isModalOpen && selectedTransaction && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                
+                {/* Modal Header */}
                 <div className="bg-[#307fe2] px-6 py-5 text-white text-center relative overflow-hidden">
                     <div className="relative z-10">
                         <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-md"><CheckCircle2 size={24} className="text-white" /></div>
-                        <h3 className="text-lg font-bold">Transaksi Berhasil</h3>
+                        <h3 className="text-lg font-bold">Detail Transaksi</h3>
                         <p className="text-blue-100 text-sm opacity-90">{selectedTransaction.kode_transaksi}</p>
-                        <p className="text-xs text-blue-200 mt-1">{new Date(selectedTransaction.created_at).toLocaleString('id-ID')}</p>
                     </div>
                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
                 </div>
@@ -413,8 +443,11 @@ const Riwayat = () => {
                 </div>
 
                 <div className="p-4 bg-white border-t border-slate-200 flex gap-3">
-                    <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all" onClick={() => window.print()}>
-                        <Printer size={18} /> Cetak
+                    <button 
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all hover:text-[#307fe2] hover:border-[#307fe2]" 
+                        onClick={handlePrint}
+                    >
+                        <Printer size={18} /> Cetak Struk
                     </button>
                     <button onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 bg-[#307fe2] text-white font-semibold rounded-xl hover:bg-blue-700 transition-all">Tutup</button>
                 </div>

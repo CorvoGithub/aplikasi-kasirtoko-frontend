@@ -1,24 +1,32 @@
 // src/components/Sidebar.jsx
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+//eslint-disable-next-line no-unused-vars
+import React, { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom'; // Added useLocation
 import { 
   Home, 
   ShoppingCart, 
   PackageSearch, 
   History,
   X,
-  LogOut
+  IdCardLanyard
 } from 'lucide-react';
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem('user'));
+  const location = useLocation(); // Hook to get current path
 
   const menuItems = [
     { to: "/dashboard/main", label: "Dashboard", icon: <Home size={22} /> },
     { to: "/dashboard/penjualan", label: "Penjualan", icon: <ShoppingCart size={22} /> },
     { to: "/dashboard/kelola", label: "Kelola Barang", icon: <PackageSearch size={22} /> },
     { to: "/dashboard/riwayat", label: "Riwayat Transaksi", icon: <History size={22} /> },
+    { to: "/dashboard/profile", label: "Profil Toko", icon: <IdCardLanyard size={22} /> },
   ];
+
+  // Calculate Active Index for the Animation
+  const activeIndex = menuItems.findIndex(item => 
+    location.pathname.startsWith(item.to)
+  );
 
   const sidebarClasses = `
     w-72 bg-white border-r border-slate-200 flex flex-col h-screen 
@@ -27,17 +35,18 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:shadow-none"}
   `;
 
+  // Item Height configuration for the slider
+  // Height (48px) + Gap (8px) = 56px step
+  const ITEM_HEIGHT = 48; 
+  const ITEM_GAP = 8;
+
   return (
     <div className={sidebarClasses}>
-      {/* 1. Header Area (Brand Identity) */}
+      {/* 1. Header Area */}
       <div className="h-20 flex items-center justify-between px-6 bg-[#307fe2] text-white">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/10">
-            <img 
-              src="/images/m_white.png" 
-              alt="Mantra Logo" 
-              className="w-8 h-8 object-contain"
-            />
+            <img src="/images/m_white.png" alt="Mantra Logo" className="w-8 h-8 object-contain"/>
           </div>
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Mantra</h1>
@@ -56,38 +65,50 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
       </div>
 
       {/* 2. Navigation Menu */}
-      <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-4 py-8 overflow-y-auto relative">
         <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
           Menu Utama
         </p>
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={() => setIsSidebarOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 relative group ${
-                isActive
-                  ? 'bg-blue-50 text-[#307fe2]' // Active State
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' // Inactive State
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {/* Active Indicator Strip */}
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-[#ffad00] rounded-r-full" />
+
+        {/* THE SLIDING INDICATOR (Background & Orange Strip) */}
+        {/* Only renders if we have a match (-1 means no match) */}
+        <div 
+            className={`absolute left-4 right-4 bg-blue-50 rounded-xl z-0 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${activeIndex === -1 ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+            style={{
+                height: `${ITEM_HEIGHT}px`,
+                transform: `translateY(${activeIndex * (ITEM_HEIGHT + ITEM_GAP)}px)`
+            }}
+        >
+            {/* The Orange Strip */}
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-[#ffad00] rounded-r-full" />
+        </div>
+
+        {/* THE MENU ITEMS */}
+        <div className="flex flex-col gap-2 relative z-10">
+            {menuItems.map((item) => (
+            <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setIsSidebarOpen(false)}
+                className={({ isActive }) =>
+                `flex items-center gap-3 px-4 h-12 rounded-xl text-sm font-medium transition-colors duration-200 ${
+                    isActive
+                    ? 'text-[#307fe2]' // Active Text Color
+                    : 'text-slate-600 hover:text-slate-900' // Inactive Text Color
+                }`
+                }
+            >
+                {({ isActive }) => (
+                <>
+                    <span className={`transition-colors ${isActive ? 'text-[#307fe2]' : 'text-slate-400'}`}>
+                        {item.icon}
+                    </span>
+                    <span>{item.label}</span>
+                </>
                 )}
-                
-                <span className={`transition-colors ${isActive ? 'text-[#307fe2]' : 'text-slate-400 group-hover:text-slate-600'}`}>
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+            </NavLink>
+            ))}
+        </div>
       </nav>
 
       {/* 3. Footer (User Profile) */}
