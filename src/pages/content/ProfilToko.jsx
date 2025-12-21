@@ -458,7 +458,6 @@ const ProfilToko = () => {
                   {confirmModal.isProcessing ? (
                     <>
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      <span>Memproses...</span>
                     </>
                   ) : (
                     "Ya, Simpan"

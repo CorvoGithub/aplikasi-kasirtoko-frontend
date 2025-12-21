@@ -321,7 +321,6 @@ const KelolaBarang = () => {
                   {deleteLoading ? (
                     <>
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      <span>Memproses...</span>
                     </>
                   ) : (
                     "Ya, Hapus"
@@ -694,7 +693,6 @@ const KelolaBarang = () => {
                 {submitLoading ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    <span>Memproses...</span>
                   </>
                 ) : (
                   "Simpan Produk"
