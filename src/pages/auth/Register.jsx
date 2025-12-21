@@ -2,12 +2,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  User, Mail, Lock, Store, ShieldCheck, Check, AlertCircle,
-  TrendingUp, Package, Wallet, History,
+  User,
+  Mail,
+  Lock,
+  Store,
+  Check,
+  AlertCircle,
+  TrendingUp,
+  Package,
+  Wallet,
+  History,
 } from "lucide-react";
 
 const Register = () => {
-  // --- STATE MANAGEMENT ---
+  // --- STATE ---
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -55,46 +63,50 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.password_confirmation) {
-        setFormData(prev => ({ ...prev, password: '', password_confirmation: '' }));
-        return triggerToast("Password konfirmasi tidak cocok", 'error');
+      setFormData((prev) => ({
+        ...prev,
+        password: "",
+        password_confirmation: "",
+      }));
+      return triggerToast("Password konfirmasi tidak cocok", "error");
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/register', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json' 
+      const response = await fetch("http://localhost:8000/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(formData),
       });
-      
+
       const data = await response.json();
 
       if (response.ok && data.success) {
-        triggerToast('Registrasi Berhasil! Silahkan login.', 'success');
-        setTimeout(() => navigate('/login'), 1500);
+        triggerToast("Registrasi Berhasil! Silahkan login.", "success");
+        setTimeout(() => navigate("/login"), 1500);
       } else {
         if (response.status === 422 && data.errors) {
-            const firstError = Object.values(data.errors).flat()[0];
-            triggerToast(firstError, 'error');
+          const firstError = Object.values(data.errors).flat()[0];
+          triggerToast(firstError, "error");
         } else {
-            triggerToast(data.message || 'Gagal Mendaftar.', 'error');
+          triggerToast(data.message || "Gagal Mendaftar.", "error");
         }
 
-        setFormData(prev => ({ 
-            ...prev, 
-            password: '', 
-            password_confirmation: '' 
+        setFormData((prev) => ({
+          ...prev,
+          password: "",
+          password_confirmation: "",
         }));
       }
     } catch (err) {
       console.error("Register Error:", err);
-      triggerToast('Koneksi Error', 'error');
+      triggerToast("Koneksi Error", "error");
     } finally {
       setLoading(false);
     }
@@ -102,7 +114,7 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex bg-white font-sans text-slate-800 relative">
-      {/* ================= CUSTOM TOAST ================= */}
+      {/* Toast Notification */}
       {toast.show && (
         <div className="fixed top-6 left-0 w-full flex justify-center z-100 pointer-events-none">
           <div
@@ -141,9 +153,8 @@ const Register = () => {
         </div>
       )}
 
-      {/* LEFT SIDE (Animation) */}
+      {/* Left Side (Animation - Desktop Only) */}
       <div className="hidden lg:flex lg:w-5/12 bg-[#307fe2] relative overflow-hidden flex-col justify-between p-12 text-white">
-        {/* Background Pattern */}
         <div
           className="absolute inset-0 opacity-10"
           style={{
@@ -153,7 +164,6 @@ const Register = () => {
           }}
         ></div>
 
-        {/* Brand */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
             <img
@@ -165,15 +175,12 @@ const Register = () => {
           <span className="text-xl font-semibold tracking-wide">Mantra</span>
         </div>
 
-        {/* --- STAGGERED STACK ANIMATION --- */}
+        {/* Animated Stack */}
         <div className="relative z-10 flex-1 flex items-center justify-center">
-          {/* The Container floats gently */}
           <div className="relative w-full max-w-sm animate-[float_6s_ease-in-out_infinite]">
-            
-            {/* Decoration Circle */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl animate-pulse-slow"></div>
 
-            {/* Card 1: Revenue (Top - White Card) */}
+            {/* Card 1 */}
             <div className="relative z-30 bg-white p-4 rounded-2xl shadow-xl shadow-blue-900/20 mb-4 transform opacity-0 animate-[entryUp_0.6s_ease-out_forwards]">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
@@ -193,7 +200,7 @@ const Register = () => {
               </h3>
             </div>
 
-            {/* Card 2: Sales History (Middle - Glassy Blue) */}
+            {/* Card 2 */}
             <div className="relative z-20 bg-blue-500/30 backdrop-blur-md border border-white/20 p-4 rounded-2xl shadow-lg mb-4 transform opacity-0 animate-[entryUp_0.6s_ease-out_0.15s_forwards]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-white/20 rounded-lg text-white">
@@ -224,18 +231,10 @@ const Register = () => {
                   </div>
                   <div className="w-10 h-1.5 bg-white/10 rounded-full"></div>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/50"></div>
-                    <div className="w-14 h-1.5 bg-white/30 rounded-full"></div>
-                  </div>
-                  <div className="w-6 h-1.5 bg-white/10 rounded-full"></div>
-                </div>
               </div>
             </div>
 
-            {/* Card 3: New Product (Bottom - Deep Brand Blue) */}
-            {/* REMOVED: ml-8 class to fix alignment */}
+            {/* Card 3 */}
             <div className="relative z-10 bg-[#1e5bb8] p-4 rounded-2xl shadow-xl transform opacity-0 animate-[entryUp_0.6s_ease-out_0.3s_forwards] border border-white/10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/10 text-blue-200 rounded-lg">
@@ -255,7 +254,6 @@ const Register = () => {
           </div>
         </div>
 
-        {/* Footer Text with Animation */}
         <div className="relative z-10 transform opacity-0 animate-[entryUp_0.6s_ease-out_0.5s_forwards]">
           <h2 className="text-2xl font-bold mb-2">Welcome to Mantra</h2>
           <p className="text-blue-100 text-sm opacity-80">
@@ -264,9 +262,27 @@ const Register = () => {
         </div>
       </div>
 
-      {/* RIGHT SIDE (Form) */}
+      {/* Right Side (Form) */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-24 bg-white overflow-y-auto">
         <div className="w-full max-w-md space-y-6">
+          {/* Mobile Branding */}
+          <div className="lg:hidden flex items-center gap-2 mb-8">
+            <div
+              className="w-8 h-8 bg-[#307fe2]"
+              style={{
+                maskImage: "url(/images/m_white.png)",
+                maskSize: "contain",
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskImage: "url(/images/m_white.png)",
+                WebkitMaskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+              }}
+            />
+            <span className="text-2xl font-bold text-[#307fe2]">Mantra</span>
+          </div>
+
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-slate-900">
               Buat Akun Baru
@@ -422,7 +438,6 @@ const Register = () => {
         </div>
       </div>
 
-      {/* Inline Animations */}
       <style>{`
         @keyframes slideDown { from { opacity: 0; transform: translateY(-150%); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-150%); } }
