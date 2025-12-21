@@ -162,11 +162,15 @@ const Riwayat = () => {
   // --- PRINTING LOGIC ---
   const user = JSON.parse(localStorage.getItem('user'));
 
+  // 1. Calculate Logo URL (Added this logic)
+  const logoUrl = user?.avatar ? `http://localhost:8000/storage/${user.avatar}` : null;
+
   // Transform the selected transaction into receipt-friendly format
   const receiptData = selectedTransaction ? {
       store_name: user?.store_name || "Mantra Store",
       store_address: user?.address || "Jl. Alamat Toko Belum Diisi",
       store_phone: user?.phone || "Telp: -",
+      store_logo: logoUrl, // 2. Pass it here!
       invoice: selectedTransaction.kode_transaksi,
       cashier: user?.name,
       date: selectedTransaction.created_at,

@@ -1,19 +1,22 @@
 // src/components/Sidebar.jsx
-//eslint-disable-next-line no-unused-vars
-import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom'; // Added useLocation
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, 
   ShoppingCart, 
   PackageSearch, 
   History,
   X,
-  IdCardLanyard
+  IdCardLanyard,
+  Store // Added Store icon for fallback
 } from 'lucide-react';
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const user = JSON.parse(localStorage.getItem('user'));
-  const location = useLocation(); // Hook to get current path
+  const location = useLocation();
+
+  // Construct Avatar URL safely
+  const avatarUrl = user?.avatar ? `http://localhost:8000/storage/${user.avatar}` : null;
 
   const menuItems = [
     { to: "/dashboard/main", label: "Dashboard", icon: <Home size={22} /> },
@@ -23,7 +26,6 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     { to: "/dashboard/profile", label: "Profil Toko", icon: <IdCardLanyard size={22} /> },
   ];
 
-  // Calculate Active Index for the Animation
   const activeIndex = menuItems.findIndex(item => 
     location.pathname.startsWith(item.to)
   );
@@ -35,8 +37,6 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:shadow-none"}
   `;
 
-  // Item Height configuration for the slider
-  // Height (48px) + Gap (8px) = 56px step
   const ITEM_HEIGHT = 48; 
   const ITEM_GAP = 8;
 
@@ -65,13 +65,12 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
       </div>
 
       {/* 2. Navigation Menu */}
-      <nav className="flex-1 px-4 py-8 overflow-y-auto relative">
+      <nav className="flex-1 px-4 py-8 overflow-y-auto relative custom-scrollbar">
         <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
           Menu Utama
         </p>
 
-        {/* THE SLIDING INDICATOR (Background & Orange Strip) */}
-        {/* Only renders if we have a match (-1 means no match) */}
+        {/* SLIDING INDICATOR */}
         <div 
             className={`absolute left-4 right-4 bg-blue-50 rounded-xl z-0 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${activeIndex === -1 ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
             style={{
@@ -79,11 +78,10 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
                 transform: `translateY(${activeIndex * (ITEM_HEIGHT + ITEM_GAP)}px)`
             }}
         >
-            {/* The Orange Strip */}
             <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-[#ffad00] rounded-r-full" />
         </div>
 
-        {/* THE MENU ITEMS */}
+        {/* MENU ITEMS */}
         <div className="flex flex-col gap-2 relative z-10">
             {menuItems.map((item) => (
             <NavLink
@@ -93,8 +91,8 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
                 className={({ isActive }) =>
                 `flex items-center gap-3 px-4 h-12 rounded-xl text-sm font-medium transition-colors duration-200 ${
                     isActive
-                    ? 'text-[#307fe2]' // Active Text Color
-                    : 'text-slate-600 hover:text-slate-900' // Inactive Text Color
+                    ? 'text-[#307fe2]' 
+                    : 'text-slate-600 hover:text-slate-900' 
                 }`
                 }
             >
@@ -111,20 +109,40 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
         </div>
       </nav>
 
-      {/* 3. Footer (User Profile) */}
+      {/* 3. REDESIGNED ACCOUNT BANNER */}
       <div className="p-4 border-t border-slate-100">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-          <div className="w-10 h-10 rounded-full bg-[#307fe2] flex items-center justify-center text-white font-bold text-sm">
-            {user?.name?.charAt(0) || 'U'}
+        <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          
+          {/* Avatar Section */}
+          <div className="shrink-0">
+            {avatarUrl ? (
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-100 shadow-sm">
+                    <img 
+                        src={avatarUrl} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+            ) : (
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-[#307fe2] to-[#2563b0] flex items-center justify-center text-white font-bold text-sm shadow-sm border border-blue-600/10">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+            )}
           </div>
+
+          {/* Text Section */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800 truncate">
+            <p className="text-sm font-bold text-slate-800 truncate leading-tight">
               {user?.name || 'User'}
             </p>
-            <p className="text-xs text-slate-500 truncate">
-              {user?.store_name || 'Mantra Store'}
-            </p>
+            <div className="flex items-center gap-1 text-slate-500 mt-0.5">
+                <Store size={10} />
+                <p className="text-[11px] font-medium truncate">
+                    {user?.store_name || 'Mantra Store'}
+                </p>
+            </div>
           </div>
+
         </div>
       </div>
     </div>
