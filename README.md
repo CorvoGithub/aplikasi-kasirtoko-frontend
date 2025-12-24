@@ -4,7 +4,7 @@ Repository ini berisi **Frontend / Client-side** untuk aplikasi **Mantra**, diba
 
 Aplikasi ini berfungsi sebagai antarmuka pengguna (UI) yang responsif untuk manajemen toko, kasir, dan pelaporan penjualan.
 
-> **Catatan:** Backend (Laravel API) untuk aplikasi ini terdapat di repository terpisah:
+> **Catatan:** Backend (Laravel API) terdapat di repository terpisah:
 > **https://github.com/CorvoGithub/aplikasi-kasirtoko-backend**
 
 ---
