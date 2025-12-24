@@ -1,16 +1,72 @@
-# React + Vite
+# Mantra - Frontend (Sistem Kasir Toko)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Repository ini berisi **Frontend / Client-side** untuk aplikasi **Mantra**, dibangun menggunakan **React + Vite**.
 
-Currently, two official plugins are available:
+Aplikasi ini berfungsi sebagai antarmuka pengguna (UI) yang responsif untuk manajemen toko, kasir, dan pelaporan penjualan.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+> **Catatan:** Backend (Laravel API) untuk aplikasi ini terdapat di repository terpisah:
+> **https://github.com/CorvoGithub/aplikasi-kasirtoko-backend**
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Fitur Frontend
 
-## Expanding the ESLint configuration
+Antarmuka ini dirancang untuk memenuhi kriteria UX/UI modern sesuai spesifikasi **Soal Tes Tipe 2**:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1.  **Responsif:** Tampilan beradaptasi sempurna pada Desktop, Tablet, dan Mobile (Dapat diuji dengan Toggle Device Toolbar).
+2.  **Point of Sale (POS):**
+    * Keranjang belanja dinamis.
+    * Kalkulasi total dan kembalian otomatis.
+    * Cetak struk belanja dengan logo toko (Crop to Circle).
+3.  **Manajemen Produk:**
+    * Upload dan preview gambar produk.
+    * Tampilan grid dengan indikator stok menipis.
+4.  **Laporan:**
+    * Visualisasi riwayat transaksi.
+    * Export data ke PDF dan Excel.
+
+---
+
+## Teknologi
+
+* **Core:** React.js, Vite
+* **Styling:** Tailwind CSS
+* **Icons:** Lucide React
+* **HTTP Client:** Axios
+* **Libraries:** React Easy Crop (Profile), JSPDF (Export), XLSX (Excel)
+
+---
+
+## Cara Menjalankan (Localhost)
+
+Pastikan Server Backend (Laravel) sudah berjalan terlebih dahulu di port 8000.
+
+1.  **Clone Repository & Install Dependencies:**
+    ```bash
+    git clone [https://github.com/CorvoGithub/aplikasi-kasirtoko-frontend](https://github.com/CorvoGithub/aplikasi-kasirtoko-frontend)
+    cd aplikasi-kasirtoko-frontend
+    npm install
+    ```
+
+2.  **Konfigurasi API:**
+    Pastikan backend berjalan di `http://127.0.0.1:8000`. Jika berbeda, sesuaikan URL pada konfigurasi Axios di source code.
+
+3.  **Jalankan Frontend:**
+    ```bash
+    npm run dev
+    ```
+
+4.  **Akses Aplikasi:**
+    Buka browser dan kunjungi URL yang muncul di terminal (biasanya `http://localhost:5173`).
+
+---
+
+## Video Demonstrasi
+
+Berikut adalah link video penjelasan kode, struktur database, dan demonstrasi penggunaan aplikasi:
+
+**https://drive.google.com/drive/folders/1rEJgcqvZjZ-vCUCDXXSrLgVeihcP7nqi?usp=drive_link**
+
+---
+
+**Dibuat oleh:** Andhika Farizky Mansyur
